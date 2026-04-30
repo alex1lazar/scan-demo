@@ -16,7 +16,7 @@
 
 import {
   useRef, useCallback, useEffect, useImperativeHandle,
-  forwardRef, useMemo, useId, useState,
+  forwardRef, useMemo, useState,
 } from 'react'
 import { useMotionValue, useTransform, animate, motion } from 'framer-motion'
 import {
@@ -60,7 +60,6 @@ export const BitsAnim = forwardRef<PlayHandle, Props>(function BitsAnim(
   },
   ref
 ) {
-  const uid         = useId().replace(/:/g, '')
   const [playKey, setPlayKey] = useState(-1)   // -1 = idle (no bits shown yet)
   const animRef     = useRef<ReturnType<typeof animate> | null>(null)
   const timerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -100,7 +99,14 @@ export const BitsAnim = forwardRef<PlayHandle, Props>(function BitsAnim(
     })
   }, [enterMs, holdMs, exitMs, maxDelay, docProgress, onComplete])
 
-  useImperativeHandle(ref, () => ({ play }), [play])
+  const stop = useCallback(() => {
+    if (animRef.current) animRef.current.stop()
+    if (timerRef.current) clearTimeout(timerRef.current)
+    docProgress.set(0)
+    setPlayKey(-1)
+  }, [docProgress])
+
+  useImperativeHandle(ref, () => ({ play, stop }), [play, stop])
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {

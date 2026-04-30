@@ -64,7 +64,12 @@ export const LineAnim = forwardRef<PlayHandle, Props>(function LineAnim(
     })
   }, [progress, sweepMs, holdMs, onComplete])
 
-  useImperativeHandle(ref, () => ({ play }), [play])
+  const stop = useCallback(() => {
+    if (animRef.current) animRef.current.stop()
+    progress.set(0)
+  }, [progress])
+
+  useImperativeHandle(ref, () => ({ play, stop }), [play, stop])
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {

@@ -94,7 +94,7 @@ export const ScanDissolve = forwardRef<PlayHandle, Props>(function ScanDissolve(
 
   // playRef lets the completion callback call the latest play() without
   // the closure going stale between Dialkit-triggered rebuilds
-  const playRef = useRef<() => void>()
+  const playRef = useRef<(() => void) | undefined>(undefined)
 
   const lineY = useTransform(progress, p => {
     const ov = overshootRef.current
