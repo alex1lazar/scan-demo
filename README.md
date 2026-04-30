@@ -1,73 +1,66 @@
-# React + TypeScript + Vite
+# Scan Dissolve
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A document scan animation prototype — a glowing sweep line travels over a document, progressively replacing it with binary digits before restoring it. Designed as a visual metaphor for OCR or data extraction moments in a product.
 
-Currently, two official plugins are available:
+**Live demo:** https://scan-demo.netlify.app
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## What it does
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+A single sweep pass works in two movements:
 
-## Expanding the ESLint configuration
+1. **Down stroke** — the scan line travels from top to bottom. Everything above the line reveals binary digits; everything below stays as the original document. The document and the digit layer are masked against each other using the line's position, so there is never a visible seam.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+2. **Up stroke** — the line returns. The masks invert back, restoring the document as the line passes.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+The loop runs continuously. Each new pass generates a fresh set of digit positions, sizes, and stagger delays so no two sweeps look the same.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+Each binary digit has its own independent lifecycle: it floats up from slightly below its target position, holds at full opacity, then blurs and fades out. The timing is randomised per digit within a configurable window, which creates organic-looking entropy rather than a uniform wave.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Corner brackets frame the document in the accent colour and scale with the overshoot value so the composition stays balanced regardless of sweep depth.
+
+---
+
+## Why it was built
+
+The animation serves as a handoff artefact — a browser prototype that can be evaluated by design, shared with engineers as a live spec, and ported to production without ambiguity. All timing values are named constants that were tuned live using a control panel (Dialkit) during design exploration and then baked into the component defaults.
+
+The goal was to avoid the usual gap between a Figma mockup and a production animation: instead of describing motion in static frames, this *is* the motion.
+
+---
+
+## How it's built
+
+The entire animation runs off a single `progress` motion value that moves `0 → 1 → 2`:
+
+```
+0 → 1   sweep down     (easeInOut, sweepMs)
+        hold at bottom (holdMs)
+1 → 2   sweep up       (easeInOut, sweepMs)
+        → restart
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+**Masking** is done with two SVG `<mask>` elements driven by a clamped version of the line's Y position. The document mask shows everything below the line; the digit mask shows everything above it. Because they're derived from the same value, the transition is pixel-perfect with no crossfade or opacity trick.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+**Per-digit animation** uses Framer Motion keyframes with a `times` array that encodes the three phases (appear, hold, exit) as proportions of the total duration. Each digit gets a random delay fraction multiplied by `maxDelay` — changing the delay slider in the demo doesn't reshuffle positions because the fraction is generated once and the multiplier is applied at render time.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+**The loop** is handled by a `playRef` pattern: the animation completion callback holds a ref to the latest version of `play()`, not a closure-captured copy, so Dialkit param changes mid-animation don't cause the next loop to run with stale values.
+
+---
+
+## Stack
+
+- **React 19** + **TypeScript**
+- **Framer Motion v12** — motion values, transforms, keyframe animations
+- **Tailwind CSS v4** — layout only
+- **Vite 8**
+
+No animation-specific build config required. The SVG masks, filters, and per-element transforms are all handled at runtime by Framer Motion and the browser's SVG renderer.
+
+---
+
+## Implementation guides
+
+- [`handoff-fe.md`](./handoff-fe.md) — drop-in guide for a React/web engineer
+- [`handoff-mobile.md`](./handoff-mobile.md) — React Native port guide (Reanimated, react-native-svg)
