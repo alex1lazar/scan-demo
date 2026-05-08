@@ -2,7 +2,7 @@
 
 A document scan animation prototype — a glowing sweep line travels over a document, progressively replacing it with binary digits before restoring it. Designed as a visual metaphor for OCR or data extraction moments in a product.
 
-**Live demo:** https://scan-demo.netlify.app
+**Live demo:** [https://scan-demo.netlify.app](https://helpful-tulumba-a4d2bd.netlify.app/)
 
 ---
 
